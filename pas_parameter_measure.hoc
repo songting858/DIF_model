@@ -1,0 +1,79 @@
+// Place current clamp to inject current at soma with five different levels in order to 
+// estimate effefctive passive parameters of the neuron model including leak conductance 
+// and the effective surface area
+
+//output file "pas_parameter.dat" storing five different voltage traces 
+
+load_file("preload_files.hoc")
+
+cvode.active(0)
+dt=0.1
+tstop=1000
+
+//==============================================================//
+
+objref savdata
+strdef target_path
+
+objref recv
+recv=new Vector()
+recv.record(&soma.v(0))
+
+//===========initialize current clamp at the soma===============//
+
+objref clampobj
+soma{
+  clampobj = new IClamp(.5)
+  clampobj.dur=tstop/2
+  clampobj.amp=0
+  clampobj.del=0
+}
+
+objref irec
+irec =new Vector()
+irec.record(&clampobj.i)
+
+objref vol
+vol= new Vector()
+
+
+proc step() {	local i
+	fadvance()
+}
+
+proc run() { local j
+	init()
+	while(t<tstop) {		
+	step()}	
+}
+
+proc main() { local i, j
+    
+    savdata = new File()
+    savdata.wopen(target_path)
+  
+    ropen()     
+    
+//===========inject currents at the soma===============//
+ for j =1,5{
+    clampobj.amp=j*0.015
+    run()   
+    vol = recv.c.sub(0) 
+    vol.printf(savdata,"%g \t")
+}
+                                                   
+    savdata.close()                                             
+    print "Done!\n"                     
+
+}
+
+
+
+proc Normal(){
+        
+    sprint(target_path, "%s", "pas_parameter.dat")
+    main()
+        
+}
+
+Normal()

@@ -1,0 +1,132 @@
+//record traces of EPSP, IPSP, SUM
+
+/*apical trunk list: 0(41.50)-2(94.47)-14(122.82)-28(151.46)-30(179.70)-32(195.53)-40(201.79)-
+	-44(227.96)-52(254.45)-60(262.17)-66(268.27)-72(283.71)-74(311.14)-78(343.59)*/
+
+load_file("preload_files.hoc")
+
+cvode.active(0)
+dt=0.1
+tstop=100
+
+I_loc=72 //44
+E_loc=78 //72
+objref r
+r = new Random()
+
+objectvar b, ampa, gabaa
+
+objref stim_gaba, stim_glut
+
+access soma
+	distance()
+	
+	stim_gaba = new NetStim1(0.5)
+	stim_gaba.number=1
+	stim_glut = new NetStim1(0.5)
+	stim_glut.number=1
+
+proc step() {	local i
+	fadvance()
+}
+
+proc run() { local j
+	init()
+	while(t<tstop) {		
+	step()}	
+}
+
+objref rect, recv, recmatrix    
+recv=new Vector()
+rect=new Vector()
+recv.record(&soma.v(0))
+rect.record(&t)
+
+
+strdef source_path, target_path
+
+proc main() { 
+	
+
+ dend[I_loc] {
+ 
+	print distance(0.5)
+	I_dist=distance(0.5)
+	
+	gabaa= new GABAa()
+	gabaa.loc(0.5)
+	setpointer gabaa.pre, stim_gaba.y	// assign presynaptic compartment
+	
+	gabaa.gmax=0
+	
+ }
+
+
+ dend[E_loc] {
+ 
+	print distance(0.5)
+	E_dist=distance(0.5)
+    	
+	ampa = new AMPA()
+	ampa.loc(0.5)
+	setpointer ampa.pre, stim_glut.y	
+	ampa.gmax		=0  //	(umho)	 maximum conductance
+  
+ }	
+  	
+recmatrix = new Matrix()
+colN=0
+recmatrix.resize(1001,30*3)
+
+for (i =1;i<31; i=i+1)  {
+
+f_E= r.uniform(0,1e-2)
+f_I= r.uniform(0,3e-2)
+
+stim_gaba.start=0
+stim_glut.start=0
+
+// I only 
+             
+gabaa.gmax = f_I 
+ampa.gmax = 0
+
+run()
+
+recmatrix.setcol(colN,recv)
+colN = colN+1
+
+// E only
+
+gabaa.gmax = 0
+ampa.gmax = f_E
+
+run()
+
+recmatrix.setcol(colN,recv)
+colN = colN+1
+
+// Combine
+ampa.gmax = f_E     //(uS)
+gabaa.gmax = f_I   
+
+run()
+
+recmatrix.setcol(colN,recv)
+colN = colN+1
+
+
+
+}
+
+
+}
+
+main()
+
+objref savdata
+savdata = new File()
+savdata.wopen("EIpair.dat")
+recmatrix.fprint(savdata,"%g \t")
+
+savdata.close()

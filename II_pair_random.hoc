@@ -1,0 +1,133 @@
+                                                                   //record traces of EPSP, IPSP, SUM, Linear SUM and Residue
+
+/*apical trunk list: 0(41.50)-2(94.47)-14(122.82)-28(151.46)-30(179.70)-32(195.53)-40(201.79)-
+	-44(227.96)-52(254.45)-60(262.17)-66(268.27)-72(283.71)-74(311.14)-78(343.59)*/
+
+load_file("preload_files.hoc")
+
+cvode.active(0)
+dt=0.1
+tstop=100
+
+I_loc1=72
+I_loc2=78
+
+objectvar gabaa1, gabaa2
+
+objref r
+r = new Random()
+
+objref stim_gaba1, stim_gaba2
+
+access soma
+	distance()
+	
+	stim_gaba1 = new NetStim1(0.5)
+	stim_gaba1.number=1
+	stim_gaba2 = new NetStim1(0.5)
+	stim_gaba2.number=1
+
+proc step() {	local i
+	fadvance()
+}
+
+proc run() { local j
+	init()
+	while(t<tstop) {		
+	step()}	
+}
+
+objref rect, recv, recmatrix   
+recv=new Vector()
+rect=new Vector()
+recv.record(&soma.v(0))
+rect.record(&t)
+
+
+strdef source_path, target_path
+
+proc main() { 
+	
+
+ dend[I_loc1] {
+ 
+	print distance(0.5)
+	I_dist1=distance(0.5)
+	
+	gabaa1= new GABAa()
+	gabaa1.loc(0.5)
+	setpointer gabaa1.pre, stim_gaba1.y	// assign presynaptic compartment
+	
+	gabaa1.gmax=0
+	
+ }
+
+
+dend[I_loc2] {
+ 
+	print distance(0.5)
+	I_dist2=distance(0.5)
+	
+	gabaa2= new GABAa()
+	gabaa2.loc(0.5)
+	setpointer gabaa2.pre, stim_gaba2.y	// assign presynaptic compartment
+	
+	gabaa2.gmax=0
+	
+ }
+  	
+recmatrix = new Matrix()
+colN=0
+recmatrix.resize(1001,30*3)
+
+for (i =1;i<31; i=i+1)  {
+
+stim_gaba1.start=0
+stim_gaba2.start=0
+
+fI1= r.uniform(0,3e-2)
+fI2= r.uniform(0,3e-2)
+
+// I1 only 
+            
+gabaa1.gmax = fI1 
+gabaa2.gmax = 0
+
+run()
+
+recmatrix.setcol(colN,recv)
+colN = colN+1
+
+ // I2 only
+
+gabaa1.gmax = 0 
+gabaa2.gmax = fI2
+
+run()
+
+recmatrix.setcol(colN,recv)
+colN = colN+1
+
+// Combine
+gabaa1.gmax = fI1     //(uS)
+gabaa2.gmax = fI2   
+
+run()
+
+recmatrix.setcol(colN,recv)
+colN = colN+1
+
+
+}
+
+
+}
+
+main()
+
+objref savdata
+savdata = new File()
+savdata.wopen("IIpair.dat")
+recmatrix.fprint(savdata,"%g \t")
+
+savdata.close()

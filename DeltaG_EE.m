@@ -1,0 +1,21 @@
+%first order difference scheme to compute
+%excitatory conductance
+function DG_E = DeltaG_EE(Voltage,ge1,ge2)
+
+global GL;
+global Vot_Excitatory;
+global dt;
+global lag;
+%rescale the voltage to DIF model scale level
+
+V=(Voltage+70)/15;
+
+Vot_Excitatory=14/3;
+
+
+dvdt=[diff(V)/dt;0];
+
+DeltaG=(dvdt+GL*V+ge1.*(V-14/3)+ge2.*(V-14/3))./(Vot_Excitatory-V);
+
+tempG_E=tsmovavg(DeltaG','s',round(lag/dt))';
+DG_E(round(lag/dt):length(DeltaG))=tempG_E(round(lag/dt):length(DeltaG));

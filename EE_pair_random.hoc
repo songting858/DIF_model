@@ -1,0 +1,137 @@
+//record traces of EPSP, IPSP, SUM
+
+/*apical trunk list: 0(41.50)-2(94.47)-14(122.82)-28(151.46)-30(179.70)-32(195.53)-40(201.79)-
+	-44(227.96)-52(254.45)-60(262.17)-66(268.27)-72(283.71)-74(311.14)-78(343.59)*/
+
+load_file("preload_files.hoc")
+
+cvode.active(0)
+dt=0.1
+tstop=100
+
+E_loc1=72   
+E_loc2=78   
+
+objref r
+r = new Random()
+
+objectvar ampa1, ampa2
+
+objref stim_glut1, stim_glut2
+
+access soma
+	distance()
+	
+	stim_glut2 = new NetStim1(0.5)
+	stim_glut2.number=1
+	stim_glut1 = new NetStim1(0.5)
+	stim_glut1.number=1
+
+proc step() {	local i
+	fadvance()
+}
+
+proc run() { local j
+	init()
+	while(t<tstop) {		
+	step()}	
+}
+
+objref rect, recv, recmatrix
+
+recv=new Vector()
+rect=new Vector()
+recv.record(&soma.v(0))
+rect.record(&t)
+
+
+strdef source_path, target_path
+
+proc main() { 
+	
+ dend[E_loc1] {
+ 
+	print distance(0.5)
+	E_dist1=distance(0.5)
+    	
+	ampa1 = new AMPA()
+	ampa1.loc(0.5)
+	setpointer ampa1.pre, stim_glut1.y	
+	ampa1.gmax		=0 //	(umho)	 maximum conductance
+  
+ }	
+ 
+ dend[E_loc2] {
+ 
+	print distance(0.5)
+	E_dist2=distance(0.5)
+    	
+	ampa2 = new AMPA()
+	ampa2.loc(0.5)
+	setpointer ampa2.pre, stim_glut2.y	
+	ampa2.gmax=0  //	(umho)	 maximum conductance
+  
+ }	
+
+
+  	
+recmatrix = new Matrix()
+colN=0
+recmatrix.resize(1001,30*3)
+
+for (i =1;i<31; i=i+1)  {
+
+fE1= r.uniform(0,5e-3)
+fE2= r.uniform(0,5e-3)
+
+stim_glut1.start=0
+stim_glut2.start=0
+
+
+// E1 only
+
+ampa2.gmax = 0
+ampa1.gmax = fE1
+
+run()
+
+recmatrix.setcol(colN,recv)
+colN = colN+1
+
+// E2 only 
+
+
+ampa1.gmax = 0             
+ampa2.gmax = fE2 
+
+run()
+recmatrix.setcol(colN,recv)
+
+colN = colN+1
+
+// Combine
+ampa1.gmax = fE1     //(uS)
+ampa2.gmax = fE2  
+
+run()
+
+recmatrix.setcol(colN,recv)
+colN = colN+1
+
+
+}
+
+
+}
+
+main()
+
+objref savdata
+savdata = new File()
+savdata.wopen("EEpair.dat")
+recmatrix.fprint(savdata,"%g \t")
+
+savdata.close()
+
+
+//for the delay case, stim_glut1.start=20  and savdata.wopen("EEpair_delay.dat")
