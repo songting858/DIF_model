@@ -1,0 +1,93 @@
+// Neuron Morphology Plot //
+
+load_file("preload_files.hoc")
+objref s   
+strdef source_path
+sprint(source_path, "%s", "source.dat")
+
+ni = 15		//number of Is        5
+ne = 15		//number of Es       15
+
+nume=ne*(ne-1)/2
+numi=ni*(ni-1)/2
+
+objref ampa[ne], nmda[ne], stim_glut[ne], b
+objref gabaa[ni], gabab[ni], stim_gaba[ni] 
+double I_loc[ni], E_loc[ne]
+double E_start[ne], I_start[ni]
+
+	
+for i=0, ni-1{	
+	stim_gaba[i] = new NetStim1(0.5)
+	stim_gaba[i].number=1
+}
+
+for j=0, ne-1{	
+	stim_glut[j] = new NetStim1(0.5)
+	stim_glut[j].number=1
+}	
+
+
+ropen(source_path)
+for j=0, ne-1{ 	E_loc[j] = fscan() }
+for i=0, ni-1{ 	I_loc[i] = fscan() }
+
+for j=0, ne-1{ 	E_start[j] = fscan() }
+for i=0, ni-1{ 	I_start[i] = fscan() }
+	 
+		
+for i=0, ni-1{ 		
+	
+  dend[I_loc[i]] {
+		 				
+	
+	gabaa[i]= new GABAa()
+	gabab[i]= new GABAb()
+	gabaa[i].loc(0.5)
+	gabab[i].loc(0.5)
+	setpointer gabaa[i].pre, stim_gaba[i].y	// assign presynaptic compartment
+	setpointer gabab[i].pre, stim_gaba[i].y
+  }	
+}
+
+for j=0, ne-1{ 		
+	
+  dend[E_loc[j]] { 
+  
+    	
+	ampa[j] = new AMPA()
+	nmda[j] = new NMDA()
+	ampa[j].loc(0.5)
+	nmda[j].loc(0.5)
+	setpointer ampa[j].pre, stim_glut[j].y	// assign presynaptic compartment
+	setpointer nmda[j].pre, stim_glut[j].y			
+	
+  }
+}
+
+
+
+
+
+
+proc morph_plot(){
+
+	//s= new Shape()
+  s = new Shape(stratum_radiatum)
+	s.exec_menu("Shape Plot")
+  
+  for i=0, ne-1{ 		
+	        s.point_mark(ampa[i],2)
+}
+  for j=0, ni-1{ 		
+	        s.point_mark(gabaa[j],3)
+}
+
+	s.exec_menu("Show Diam")
+//	s.printfile("D:/f.eps")
+  s.rotate(200,-350,0,0,0,3.4)
+  s.printfile("C:\\Users\\apple\\Desktop\\FCNS code\\tree.eps")
+
+}
+
+morph_plot()

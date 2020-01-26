@@ -1,0 +1,81 @@
+// To initialize biophysical properties of the cell//
+// Reset values, 2008-12-20
+
+//	Parameters  //
+
+    celsius = 34.0                           
+                                             
+    Rm = 	2e4	 //2.8e5		-	                           
+    RmEnd = 2e4		 //3.2e4                              
+    RmSoma = Rm                              
+    RmAx = Rm                                
+                                             
+    Cm    = 1       	 // -                 
+                                        
+    RaAll = 80 		 // +                       
+                                             
+    Vrest = -70
+    
+    gabab_gabaa_ratio = 0.6
+    nmda_ampa_ratio = 0.6		//to be reset in the main() function
+    Block_NMDA_Flag = 0
+    
+// To balance current //    
+
+proc current_balance() {
+	
+		finitialize($1)
+  	fcurrent()
+
+//  	printf("Balancing each segment to %d mV\n", $1)		
+}			
+    
+// cell initialization //
+    
+proc init() {
+		
+		access soma
+		
+		distance()
+
+		forsec "soma" {	
+ //   insert hh
+		insert pas e_pas=Vrest g_pas=0.0001
+      
+      Ra = RaAll cm = Cm 
+      
+    }
+      
+    forsec axon_sections	{
+	                                                 
+      insert pas  e_pas = Vrest g_pas = 0.0001 Ra = RaAll cm = Cm                      
+
+    } 
+      
+    forsec basal_dendrite	{
+    
+      
+      insert pas e_pas = Vrest g_pas = 0.0001 Ra = RaAll cm = Cm     
+    }
+    
+    forsec apical_dendrite {
+      
+    	insert pas e_pas = Vrest Ra = RaAll  cm = Cm  
+		                                                                               
+                                                                              
+        for (x) if (x>0 && x<1) { 
+        
+        					xdist = distance(x)
+        					                  
+                  rm = RaAll 
+         					g_pas(x) = 0.0001 
+                  
+        }                                                      
+    } 
+//   } 
+		current_balance(Vrest)   
+//		print "Cell Initialized!\n"	  
+}
+
+
+                                                                          
